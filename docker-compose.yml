@@ -82,6 +82,7 @@ services:
     hostname: fluent-bit
     volumes:
       - ./docker/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./docker/fluent-bit/parsers.conf:/fluent-bit/etc/parsers_custom.conf:ro
     networks:
       - observability
     depends_on:
