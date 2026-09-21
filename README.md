@@ -1,6 +1,45 @@
-# DevOps Monitoring & Observability Dashboard
+<div align="center">
+
+![Header](https://capsule-render.vercel.app/api?type=waving&color=0:0f2027,50:2c5364,100:00c6ff&height=220&section=header&text=DevOps%20Observability%20Platform&fontSize=42&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=FastAPI%20%C2%B7%20Prometheus%20%C2%B7%20Grafana%20%C2%B7%20Loki%20%C2%B7%20Kubernetes&descAlignY=58&descSize=18)
+
+![Typing SVG](https://readme-typing-svg.demolab.com/?font=Fira+Code&weight=500&size=20&duration=3000&pause=800&color=00C6FF&center=true&vCenter=true&width=700&lines=Production-grade+monitoring+platform;Self-healing+Kubernetes+deployment;Metrics+%2B+Logs+%2B+Alerts+in+one+pane;Chaos-tested+%C2%B7+CI%2FCD+automated)
+
+<p>
+  <img src="https://img.shields.io/badge/python-3.11-blue?logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/FastAPI-0.110.0-009688?logo=fastapi&logoColor=white" />
+  <img src="https://img.shields.io/badge/Kubernetes-v1.28%2B-326CE5?logo=kubernetes&logoColor=white" />
+  <img src="https://img.shields.io/badge/Prometheus-v2.51.0-E6522C?logo=prometheus&logoColor=white" />
+  <img src="https://img.shields.io/badge/Grafana-10.4.0-F46800?logo=grafana&logoColor=white" />
+  <img src="https://img.shields.io/badge/Loki-2.9.4-F5A623?logo=grafana&logoColor=white" />
+  <img src="https://img.shields.io/badge/status-all%2015%20phases%20complete-brightgreen" />
+  <img src="https://img.shields.io/badge/license-demo%20project-lightgrey" />
+</p>
+
+</div>
+
+---
 
 A production-grade, end-to-end DevOps monitoring and CI/CD platform. This project demonstrates containerized Python FastAPI microservice deployment on Kubernetes, fully instrumented with Prometheus metrics, Grafana Loki logs, Grafana dashboards, and Alertmanager alerting for real-time operational visibility.
+
+<div align="center">
+  <sub>🟢 Live self-healing · 🟠 Chaos-tested alerting · 🔵 Full observability out of the box</sub>
+</div>
+
+## 📑 Table of Contents
+
+- [Architecture Overview](#architecture-overview)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Quick Start (Docker Compose)](#quick-start-docker-compose)
+- [Kubernetes Deployment](#kubernetes-deployment)
+- [Verification Steps](#verification-steps)
+- [Sample PromQL Queries](#sample-promql-queries)
+- [Sample LogQL Query](#sample-logql-query)
+- [Sample Alertmanager Payload](#sample-alertmanager-payload)
+- [CI/CD Pipelines](#cicd-pipelines)
+- [Directory Structure](#directory-structure)
+- [Fun / Demo Endpoints](#fun--demo-endpoints)
+- [License](#license)
 
 ---
 
@@ -14,6 +53,52 @@ The platform follows a decoupled microservices and cloud-native observability pa
 - **Jenkins (CD):** Pulls the CI-validated immutable image, applies Kubernetes manifests, monitors rollout status, runs synthetic health verification, and triggers automatic rollback (`kubectl rollout undo`) on failure.
 
 **Kubernetes orchestration** manages the application workload (3 replicas, RollingUpdate, health probes, HPA) in the `default` namespace, while the observability stack (Prometheus, Loki, Fluent Bit, Alertmanager, Grafana) runs in the `monitoring` namespace.
+
+<details open>
+<summary><b>🖼️ Click to toggle: Mermaid architecture diagram (renders live on GitHub)</b></summary>
+
+```mermaid
+flowchart LR
+    subgraph CI["🔧 CI — GitHub Actions"]
+        A[Push to main] --> B[Lint + Test]
+        B --> C[Docker Build]
+        C --> D[Trivy Scan]
+        D --> E[Publish to GHCR]
+    end
+
+    subgraph CD["🚀 CD — Jenkins"]
+        E --> F[Pull Immutable Image]
+        F --> G[kubectl apply -f k8s/]
+        G --> H[Rollout Status Check]
+        H -->|fail| I[Auto Rollback]
+        H -->|pass| J[Healthy Release]
+    end
+
+    subgraph K8s["☸️ Kubernetes Cluster"]
+        subgraph default["namespace: default"]
+            J --> P1[Pod 1]
+            J --> P2[Pod 2]
+            J --> P3[Pod 3]
+        end
+        subgraph monitoring["namespace: monitoring"]
+            PR[Prometheus] --> AM[Alertmanager]
+            FB[Fluent Bit] --> LK[Loki]
+            PR --> GF[Grafana]
+            LK --> GF
+        end
+        P1 -. scraped every 15s .-> PR
+        P2 -. scraped every 15s .-> PR
+        P3 -. scraped every 15s .-> PR
+        P1 -. json logs .-> FB
+        P2 -. json logs .-> FB
+        P3 -. json logs .-> FB
+    end
+```
+
+</details>
+
+<details>
+<summary><b>📦 Click to toggle: Original ASCII diagram</b></summary>
 
 ```
 +-----------------------+         +------------------+         +---------------------+
@@ -35,6 +120,8 @@ The platform follows a decoupled microservices and cloud-native observability pa
                                                               |   Grafana           |
                                                               +---------------------+
 ```
+
+</details>
 
 See `devops_monitoring_observability_dashboard_architecture.md` and `docs/SystemArchitecture.md` for the full architecture diagram and communication flows.
 
@@ -231,6 +318,14 @@ http_request_duration_seconds_count{handler="/api/data",method="GET"} 1420
 
 Open http://localhost:3000 (default credentials: admin/admin). The "DevOps Operational Dashboard" displays four synchronized panels.
 
+<div align="center">
+
+> 🎬 **Tip:** Record a short GIF of Grafana lighting up during a chaos run (`scripts/simulate_traffic.sh --mode chaos`) and drop it here — nothing sells this project harder than watching the error-rate panel spike live.
+>
+> `![Demo](docs/media/grafana-chaos-demo.gif)`
+
+</div>
+
 ---
 
 ## Sample PromQL Queries
@@ -306,7 +401,8 @@ When an alerting condition triggers (e.g., HTTP 5xx error rate exceeds 5% for 2 
 
 ## CI/CD Pipelines
 
-### GitHub Actions (Continuous Integration)
+<details open>
+<summary><b>⚙️ GitHub Actions (Continuous Integration)</b></summary>
 
 Defined in `.github/workflows/deploy.yml`. Triggers on push and pull request to `main`.
 
@@ -317,7 +413,10 @@ Defined in `.github/workflows/deploy.yml`. Triggers on push and pull request to 
 | Trivy Scan | Scans the built image for CRITICAL and HIGH vulnerabilities; fails the pipeline on discovery |
 | Publish | Pushes the SHA-tagged image to GitHub Container Registry (GHCR) |
 
-### Jenkins (Continuous Deployment)
+</details>
+
+<details>
+<summary><b>🚀 Jenkins (Continuous Deployment)</b></summary>
 
 Defined in `jenkins/Jenkinsfile`. Deploys the CI-validated image to Kubernetes.
 
@@ -330,9 +429,14 @@ Defined in `jenkins/Jenkinsfile`. Deploys the CI-validated image to Kubernetes.
 | Rollout Status | Monitors deployment rollout (`kubectl rollout status --timeout=60s`) |
 | Verify / Rollback | Runs `scripts/health_check.sh` (10x HTTP probes to `/api/health`). On failure: executes `kubectl rollout undo` and aborts the build |
 
+</details>
+
 ---
 
 ## Directory Structure
+
+<details>
+<summary><b>📁 Click to expand full directory tree</b></summary>
 
 ```
 devops-project1/
@@ -392,6 +496,8 @@ devops-project1/
 └── README.md                        # This file
 ```
 
+</details>
+
 ---
 
 ## Fun / Demo Endpoints
@@ -410,6 +516,13 @@ Interactive landing page and lightweight fun endpoints for quick API testing and
 
 The landing page (`/`) displays a live request counter and fetch results inline via JavaScript — no page reloads required.
 
+<div align="center">
+
+> 🎬 Drop a short GIF of the landing page buttons in action here:
+> `![Landing Page Demo](docs/media/landing-page-demo.gif)`
+
+</div>
+
 ---
 
 ## License
@@ -417,3 +530,9 @@ The landing page (`/`) displays a live request counter and fetch results inline 
 This project is provided as a demonstration of DevOps monitoring and CI/CD best practices.
 
 **Project Status:** All 15 implementation phases are complete. The application, observability stack, CI/CD pipelines, and Kubernetes manifests are fully implemented and validated.
+
+<div align="center">
+
+![Footer](https://capsule-render.vercel.app/api?type=waving&color=0:00c6ff,100:0f2027&height=120&section=footer)
+
+</div>
