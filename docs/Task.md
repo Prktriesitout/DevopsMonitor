@@ -414,7 +414,7 @@ Verify system resilience, alert triggers, and self-healing under simulated failu
 - [x] **Task 14.2: Validate Self-Healing & Alerting Pipeline**
   - Subtask 14.2.1: Inject 500 errors; verify Prometheus error rate rule shifts to `FIRING`. — PASS (live validated: `simulate_traffic.sh --chaos --duration 60` → error rate 96%+; `HighHTTPErrorRate` state = `firing` via `/api/v1/rules`)
   - Subtask 14.2.2: Verify Alertmanager receives alert payload. — PASS (live validated: `/api/v2/alerts` returned active alert with `alertname=HighHTTPErrorRate`, `severity=critical`, `state=active`)
-  - Subtask 14.2.3: Delete an active pod via `kubectl delete pod`; verify ReplicaSet immediately schedules replacement. — ENVIRONMENTALLY BLOCKED (no Kubernetes cluster running; `kubectl delete pod --all -n default` → `Unable to connect to the server: dial tcp [::1]:8080: connectex: No connection could be made because the target machine actively refused it.`)
+  - Subtask 14.2.3: Delete an active pod via `kubectl delete pod`; verify ReplicaSet immediately schedules replacement. — PASS (batch F2 validated on Docker Desktop k8s v1.36.1: deployed 3/3 pods via `kubectl apply -f k8s/`; deleted `devops-monitored-app-d8dc8dd56-kg5cq`; replicaset-controller created replacement `devops-monitored-app-d8dc8dd56-rklh8` within seconds; 3/3 Running/Ready restored. Events: `SuccessfulCreate` from replicaset-controller confirmed. Teardown: `kubectl delete -f k8s/` removed all resources; no pods in default.)
 
 ### Dependencies
 Phases 8, 10, 11.

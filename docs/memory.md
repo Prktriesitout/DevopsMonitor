@@ -174,14 +174,30 @@
   - [x] Subtask 14.2.2: Verify Alertmanager receives alert payload. — PASS (live validated)
     - Alertmanager API (`/api/v2/alerts`): returned active alert payload
     - Payload: `alertname=HighHTTPErrorRate`, `severity=critical`, `state=active`, `receiver=default-receiver`, `startsAt=2026-09-21T19:08:16.781Z`, `fingerprint=94813c5467cebb84`
-  - [x] Subtask 14.2.3: Delete an active pod via `kubectl delete pod` — ENVIRONMENTALLY BLOCKED
-    - `kubectl delete pod --all -n default 2>&1` → `Unable to connect to the server: dial tcp [::1]:8080: connectex: No connection could be made because the target machine actively refused it.`
-    - No Kubernetes cluster running; exact error recorded
+  - [x] Subtask 14.2.3: Delete an active pod via `kubectl delete pod` — PASS (batch F2 validated on Docker Desktop k8s v1.36.1)
+    - Deployed: `kubectl apply -f k8s/` → 3/3 Running/Ready (image devops-monitored-app:1.0.0 built locally)
+    - Before: `devops-monitored-app-d8dc8dd56-kg5cq`, `kjr7g`, `l5x9f` all 1/1 Running
+    - Delete: `kubectl delete pod devops-monitored-app-d8dc8dd56-kg5cq -n default`
+    - During: 2 Running + 1 new pod `rklh8` created by replicaset-controller
+    - After: 3/3 Running/Ready restored; replicaset `SuccessfulCreate` event confirmed
+    - Teardown: `kubectl delete -f k8s/` removed all resources; `kubectl get pods -n default` → no resources found
   - [x] Fluent Bit status recorded: Exited (1) — `[error] configuration file contains errors, aborting.` due to known `[PARSER]` section incompatibility with Fluent Bit v2.2.2. NOT fixed per LOCKED DECISION 1.
   - [x] **RESOLVED by BATCH F1 (2026-09-22):** Fluent Bit [PARSER] fix applied. See BATCH F1 entry in memory.md for full details.
   - [x] Cleanup: `docker compose down -v` completed; zero project containers remaining
   - [x] Scope validation PASS (no files modified; only live stack ops)
   - [x] Reviewer status: PENDING
+
+- [x] **Batch F2: K8s Pod Self-Healing Validation (2026-09-22)**
+  - [x] Docker Desktop Kubernetes v1.36.1; context `docker-desktop`; node `desktop-control-plane` Ready
+  - [x] Built `devops-monitored-app:1.0.0` locally (image was not present; Dockerfile build succeeded)
+  - [x] Deployed: `kubectl apply -f k8s/` (namespace, configmap, deployment, service, hpa applied; servicemonitor/prometheus-rules skipped — CRDs not installed)
+  - [x] Pods: 3/3 Running/Ready (`devops-monitored-app-d8dc8dd56-{kg5cq,kjr7g,l5x9f}`)
+  - [x] Pod deletion: `kubectl delete pod devops-monitored-app-d8dc8dd56-kg5cq` → replicaset-controller immediately created replacement pod `rklh8`
+  - [x] ReplicaSet events confirmed: `SuccessfulCreate` from `replicaset-controller`
+  - [x] After: 3/3 Running/Ready restored
+  - [x] Teardown: `kubectl delete -f k8s/` → all resources removed; no pods in default; namespace active
+  - [x] Docs: Task.md line 417 updated ENVIRONMENTALLY BLOCKED → PASS; memory.md subtask 14.2.3 updated
+  - [x] Scope validation PASS: no manifest modifications; only kubectl ops + docs updates
 
 ---
 
