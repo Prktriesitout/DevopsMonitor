@@ -1,0 +1,26 @@
+# Task 11.1 — Namespace definitions.
+# Declares the application (default) and observability (monitoring) namespaces
+# per SystemArchitecture section 6.1. App workloads live in `default`;
+# Prometheus/Alertmanager/Loki/Grafana live in `monitoring`
+# (see k8s/prometheus-rules.yaml, namespace: monitoring).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+  labels:
+    app.kubernetes.io/name: devops-monitored-app
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: devops-observability-platform
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    app.kubernetes.io/name: devops-monitored-app
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: devops-observability-platform

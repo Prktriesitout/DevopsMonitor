@@ -1,0 +1,41 @@
+# Version control
+.git
+.gitignore
+
+# Docs and architecture notes (not needed in app image)
+docs/
+*.md
+
+# Tests (not needed in app image)
+tests/
+.pytest_cache/
+.hypothesis/
+.coverage
+coverage.xml
+htmlcov/
+
+# Python bytecode / caches
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual envs and local env files
+.venv/
+venv/
+ENV/
+.env
+.env.*
+
+# CI/CD and orchestration manifests (not needed in app image)
+.github/
+jenkins/
+k8s/
+
+# IDE / OS caches
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

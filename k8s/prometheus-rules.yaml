@@ -1,0 +1,39 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: devops-monitored-app-rules
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: devops-monitored-app
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: devops-observability-platform
+spec:
+  groups:
+    - name: devops-monitored-app
+      rules:
+        - alert: HighHTTPErrorRate
+          expr: sum(rate(http_requests_total{status="5xx"}[2m])) / sum(rate(http_requests_total[2m])) * 100 > 5
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: High 5xx HTTP error rate detected
+            description: HTTP 5xx error rate is above 5% over the last 2 minutes.
+        - alert: AppPodDown
+          expr: up{job="devops-monitored-app"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: Application target unreachable
+            description: Prometheus has been unable to scrape devops-monitored-app for more than 1 minute.
+        - alert: HighLatencyDetected
+          expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[2m])) by (le)) > 0.5
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: High p95 request latency detected
+            description: p95 request latency is above 500ms over the last 2 minutes.

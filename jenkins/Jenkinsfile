@@ -1,0 +1,135 @@
+// jenkins/Jenkinsfile — Continuous Deployment pipeline (Phase 13).
+//
+// Division of responsibility: GitHub Actions (.github/workflows/deploy.yml)
+// performs CI only (flake8, pytest, Docker build, Trivy scan, publish).
+// This pipeline performs CD only: pull the CI-validated immutable image,
+// apply Kubernetes manifests, monitor the rollout, verify service health,
+// and roll back automatically on verification failure.
+//
+// Image tag convention (immutable, Rulebook 5.3):
+//   ghcr.io/<owner>/<repo>:<full git SHA>   e.g. ghcr.io/acme/devops-app:abc1234...
+// The tag resolves from the IMAGE_TAG build parameter and defaults to the
+// checked-out commit SHA (env.GIT_COMMIT) when the parameter is empty.
+// Only SHA tags are ever pulled or deployed; floating/untracked tags are
+// never built, pulled, or deployed by this pipeline.
+//
+// Secrets handling (Rulebook 6.4):
+//   - Registry credentials are injected via withCredentials/docker login
+//     using the REGISTRY_CREDENTIALS_ID variable only; no usernames,
+//     passwords, or tokens appear literally anywhere in this file.
+//   - Cluster access is injected via withKubeConfig using the
+//     KUBECONFIG_CREDENTIALS_ID variable only; no kubeconfig content is
+//     embedded in this file.
+
+pipeline {
+    agent any
+
+    parameters {
+        string(
+            name: 'IMAGE_TAG',
+            defaultValue: '',
+            description: 'Immutable image tag (full git SHA) published by CI. Leave empty to deploy the current commit SHA (GIT_COMMIT).'
+        )
+    }
+
+    environment {
+        // Image coordinates. IMAGE_REPOSITORY must match the repository
+        // published by CI (ghcr.io/<owner>/<repo>); only SHA tags are used.
+        REGISTRY_HOST = 'ghcr.io'
+        IMAGE_REPOSITORY = 'ghcr.io/devops-monitored-app'
+        // Credential *ID* references only (Jenkins credential-store handles —
+        // not secret values). Referenced via variables at every call site.
+        REGISTRY_CREDENTIALS_ID = 'ghcr-credentials'
+        KUBECONFIG_CREDENTIALS_ID = 'kubeconfig-credentials'
+        DEPLOYMENT_NAME = 'devops-monitored-app'
+        HEALTH_CHECK_SCRIPT = './scripts/health_check.sh'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checks out the exact repository/branch that triggered this build.
+                checkout scm
+                sh 'git rev-parse --short HEAD'
+            }
+        }
+
+        stage('Setup') {
+            steps {
+                script {
+                    // IMAGE_TAG build parameter wins; otherwise fall back to
+                    // the git SHA of the checked-out commit (env.GIT_COMMIT).
+                    def requested = params.IMAGE_TAG ? params.IMAGE_TAG.trim() : ''
+                    env.EFFECTIVE_IMAGE_TAG = requested ? requested : env.GIT_COMMIT
+                    if (!env.EFFECTIVE_IMAGE_TAG?.trim()) {
+                        error 'No image tag resolved: supply the IMAGE_TAG parameter or ensure GIT_COMMIT is set.'
+                    }
+                    echo "[INFO] Deploying immutable image ${env.IMAGE_REPOSITORY}:${env.EFFECTIVE_IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Pull Validated Image') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: "${env.REGISTRY_CREDENTIALS_ID}",
+                    usernameVariable: 'REGISTRY_USER',
+                    passwordVariable: 'REGISTRY_PASSWORD'
+                )]) {
+                    // Pull only the CI-validated SHA tag (the Trivy gate
+                    // already passed in CI). Floating tags are never used.
+                    sh '''
+                        echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY_HOST}" -u "${REGISTRY_USER}" --password-stdin
+                        docker pull "${IMAGE_REPOSITORY}:${EFFECTIVE_IMAGE_TAG}"
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                withKubeConfig([credentialsId: "${env.KUBECONFIG_CREDENTIALS_ID}"]) {
+                    sh 'kubectl apply -f k8s/'
+                }
+            }
+        }
+
+        stage('Rollout Status') {
+            steps {
+                withKubeConfig([credentialsId: "${env.KUBECONFIG_CREDENTIALS_ID}"]) {
+                    sh 'kubectl rollout status deployment/devops-monitored-app --timeout=60s'
+                }
+            }
+        }
+
+        stage('Verify / Rollback') {
+            steps {
+                script {
+                    withKubeConfig([credentialsId: "${env.KUBECONFIG_CREDENTIALS_ID}"]) {
+                        // returnStatus captures the probe result so this
+                        // rollback branch cannot be bypassed: a failing probe
+                        // never silently passes the stage (plain `sh` would
+                        // abort before the rollback could run).
+                        def healthStatus = sh(script: "${env.HEALTH_CHECK_SCRIPT}", returnStatus: true)
+                        if (healthStatus != 0) {
+                            echo '[ERROR] Post-deployment health verification FAILED — rolling back.'
+                            sh 'kubectl rollout undo deployment/devops-monitored-app'
+                            error 'Health verification failed; rollback executed (kubectl rollout undo deployment/devops-monitored-app). Aborting build.'
+                        } else {
+                            echo '[INFO] Post-deployment health verification SUCCEEDED — deployment stands.'
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '[INFO] CD pipeline completed successfully.'
+        }
+        failure {
+            echo '[ERROR] CD pipeline failed. See stage logs for details.'
+        }
+    }
+}

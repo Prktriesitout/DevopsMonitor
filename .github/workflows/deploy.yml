@@ -1,0 +1,125 @@
+# GitHub Actions CI pipeline — Phase 12 Task 12.1.
+#
+# Division of responsibility: this workflow performs Continuous Integration
+# only (lint, test, build, scan, publish). Continuous Deployment to
+# Kubernetes (kubectl apply, rollout status, health guard, rollback) lives
+# in Jenkins (jenkins/Jenkinsfile, Phase 13) — never duplicated here.
+#
+# Tag convention (immutable, Rulebook 5.3):
+#   ghcr.io/<owner>/<repo>:<full git SHA>   e.g. ghcr.io/acme/devops-app:abc1234...
+# The full 40-char commit SHA guarantees one immutable tag per commit.
+# The `latest` tag is NEVER built, pushed, scanned, or deployed.
+#
+# NOTE: Each job runs on a fresh ephemeral runner, so the image is rebuilt
+# deterministically from the same commit in jobs 2-4; the tag is identical
+# in every job because it derives from ${{ github.sha }}.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  # Job 1: fast checks first (Rulebook 5.1 fail-fast) — lint + unit tests.
+  python-ci:
+    name: Python CI (lint + test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: src/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r src/requirements.txt
+
+      - name: Lint with flake8
+        run: flake8 src/
+
+      - name: Run unit tests
+        run: pytest src/tests/ -v
+
+  # Job 2: resource-intensive Docker build runs only after fast checks pass.
+  docker-build:
+    name: Docker build (SHA tag)
+    runs-on: ubuntu-latest
+    needs: python-ci
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image with commit-SHA tag (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+  # Job 3: Trivy security gate — CRITICAL (or HIGH) findings fail the job.
+  trivy-scan:
+    name: Trivy vulnerability scan
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Rebuild SHA-tagged image for scan
+        run: docker build -f ./Dockerfile -t "${IMAGE_NAME}:${IMAGE_TAG}" .
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+
+  # Job 4: publish the identical SHA tag — only if lint, test, build, and
+  # the Trivy gate all succeeded (via needs chain). Secrets only; no
+  # literal credentials anywhere in this file.
+  publish:
+    name: Publish image to GHCR
+    runs-on: ubuntu-latest
+    needs: trivy-scan
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push SHA-tagged image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}

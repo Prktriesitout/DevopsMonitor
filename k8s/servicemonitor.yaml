@@ -1,0 +1,28 @@
+# Task 11.3 — Prometheus Operator ServiceMonitor for devops-monitored-app.
+# Lives in `monitoring` alongside the Prometheus stack and the existing
+# k8s/prometheus-rules.yaml (READ-ONLY, untouched); namespaceSelector reaches
+# the app Service in `default`. Selector matches k8s/service.yaml labels.
+# Scrapes GET /metrics on port 8000 every 15s (SystemArchitecture section 3.2).
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: devops-monitored-app
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: devops-monitored-app
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: devops-observability-platform
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: devops-monitored-app
+  namespaceSelector:
+    matchNames:
+      - default
+  endpoints:
+    - path: /metrics
+      targetPort: 8000
+      interval: 15s
+      scrapeTimeout: 10s

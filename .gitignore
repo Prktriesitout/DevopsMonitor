@@ -1,0 +1,45 @@
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+ENV/
+
+# Environment / secrets (Rulebook Sec 2.1 — never commit prod credentials)
+.env
+.env.*
+!.env.example
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.hypothesis/
+*.cover
+
+# Testing temp outputs
+*.log
+*.tmp
+nosetests.xml
+test-results/
+junit.xml
+
+# IDE caches
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini

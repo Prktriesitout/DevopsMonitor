@@ -1,0 +1,28 @@
+# Task 11.3 — HorizontalPodAutoscaler for devops-monitored-app.
+# Scales the k8s/deployment.yaml Deployment on CPU utilization (70%),
+# between 2 and 6 replicas per SystemArchitecture section 6.2.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: devops-monitored-app
+  namespace: default
+  labels:
+    app.kubernetes.io/name: devops-monitored-app
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: devops-observability-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: devops-monitored-app
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

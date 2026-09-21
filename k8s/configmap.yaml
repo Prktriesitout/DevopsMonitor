@@ -1,0 +1,22 @@
+# Task 11.1 — Application runtime configuration.
+# Non-sensitive environment variables only (Rulebook section 4.7).
+# Values mirror src/config.py AppSettings defaults exactly:
+#   APP_NAME=devops-monitored-app, ENVIRONMENT=development,
+#   PORT=8000, LOG_LEVEL=INFO.
+# Consumed by k8s/deployment.yaml via envFrom/configMapRef.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devops-app-config
+  namespace: default
+  labels:
+    app.kubernetes.io/name: devops-monitored-app
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: devops-observability-platform
+data:
+  APP_NAME: "devops-monitored-app"
+  ENVIRONMENT: "development"
+  PORT: "8000"
+  LOG_LEVEL: "INFO"

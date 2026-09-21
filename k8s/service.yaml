@@ -1,0 +1,24 @@
+# Task 11.2 — ClusterIP Service for devops-monitored-app.
+# Selector matches k8s/deployment.yaml pod template labels exactly.
+# Prometheus scrapes http://devops-monitored-app-service:8000/metrics (15s).
+apiVersion: v1
+kind: Service
+metadata:
+  name: devops-monitored-app-service
+  namespace: default
+  labels:
+    app.kubernetes.io/name: devops-monitored-app
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: devops-observability-platform
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: devops-monitored-app
+    app.kubernetes.io/component: backend
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
