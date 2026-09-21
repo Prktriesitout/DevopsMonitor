@@ -57,6 +57,13 @@ app = FastAPI(title=settings.APP_NAME)
 if settings.METRICS_ENABLED:
     Instrumentator().instrument(app).expose(app)
 
+try:
+    from src.fun import router as fun_router
+except ImportError:  # pragma: no cover
+    from fun import router as fun_router
+
+app.include_router(fun_router)
+
 
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next):

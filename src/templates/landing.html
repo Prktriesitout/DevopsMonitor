@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevOps Monitor &mdash; Fun Endpoints</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0B0E14; color: #F1F5F9;
+    min-height: 100vh; padding: 2rem;
+  }
+  h1 { font-size: 1.8rem; margin-bottom: 0.3rem; color: #3B82F6; }
+  .subtitle { color: #94A3B8; margin-bottom: 2rem; font-size: 0.95rem; }
+  .counter {
+    background: #151B26; border: 1px solid #232D3F;
+    border-radius: 8px; padding: 1rem 1.5rem;
+    margin-bottom: 2rem; display: inline-block;
+  }
+  .counter span { color: #3B82F6; font-size: 1.6rem; font-weight: 700; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    background: #151B26; border: 1px solid #232D3F;
+    border-radius: 8px; padding: 1.2rem;
+  }
+  .card h2 { font-size: 1rem; color: #F1F5F9; margin-bottom: 0.5rem; }
+  .card p { color: #94A3B8; font-size: 0.85rem; margin-bottom: 0.8rem; }
+  .card pre {
+    background: #0B0E14; border: 1px solid #232D3F;
+    border-radius: 4px; padding: 0.7rem; font-size: 0.8rem;
+    color: #10B981; max-height: 150px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-all;
+    min-height: 2.5rem; margin-bottom: 0.6rem;
+  }
+  button {
+    background: #3B82F6; color: #fff; border: none;
+    border-radius: 6px; padding: 0.55rem 1.2rem;
+    cursor: pointer; font-size: 0.85rem;
+    transition: background 0.15s;
+  }
+  button:hover { background: #2563EB; }
+  button:active { transform: scale(0.97); }
+  button.danger { background: #EF4444; }
+  button.danger:hover { background: #DC2626; }
+</style>
+</head>
+<body>
+<h1>DevOps Monitor</h1>
+<p class="subtitle">Interactive landing page &mdash; hit buttons to exercise the API.</p>
+<div class="counter">
+  Fun requests served this session: <span id="funCount">0</span>
+</div>
+<div class="grid" id="cards"></div>
+<script>
+const cards = [
+  {
+    title: 'Health Check',
+    desc: 'GET /api/health',
+    url: '/api/health',
+    color: null
+  },
+  {
+    title: 'Get Data',
+    desc: 'GET /api/data',
+    url: '/api/data',
+    color: null
+  },
+  {
+    title: 'Roll Dice',
+    desc: 'GET /api/dice?sides=6',
+    url: '/api/dice?sides=6',
+    color: null
+  },
+  {
+    title: 'Flip Coin',
+    desc: 'GET /api/coinflip',
+    url: '/api/coinflip',
+    color: null
+  },
+  {
+    title: 'Tell a Joke',
+    desc: 'GET /api/joke',
+    url: '/api/joke',
+    color: null
+  },
+  {
+    title: 'Give me a Quote',
+    desc: 'GET /api/quote',
+    url: '/api/quote',
+    color: null
+  },
+  {
+    title: 'Get my Fortune',
+    desc: 'GET /api/fortune',
+    url: '/api/fortune',
+    color: null
+  },
+  {
+    title: 'Simulate Error',
+    desc: 'GET /api/simulate-error (500)',
+    url: '/api/simulate-error',
+    color: 'danger'
+  }
+];
+const grid = document.getElementById('cards');
+cards.forEach(function (c) {
+  var card = document.createElement('div');
+  card.className = 'card';
+  var heading = '<h2>' + c.title + '</h2>';
+  var desc = '<p>' + c.desc + '</p>';
+  var outId = 'out-' + c.title.replace(/\s+/g, '');
+  var pre = '<pre id="' + outId + '">Click to try</pre>';
+  var cls = c.color || '';
+  var btn = '<button class="' + cls + '"'
+    + ' data-url="' + c.url + '">Run</button>';
+  card.innerHTML = heading + desc + pre + btn;
+  grid.appendChild(card);
+});
+document.querySelectorAll('button[data-url]')
+  .forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      var pre = btn.parentElement.querySelector('pre');
+      pre.textContent = 'Loading...';
+      try {
+        var res = await fetch(btn.dataset.url);
+        var body = await res.text();
+        pre.textContent = res.status + ' ' + body;
+      } catch (e) {
+        pre.textContent = 'Error: ' + e.message;
+      }
+      refreshFunCount();
+    });
+  });
+async function refreshFunCount() {
+  try {
+    var r = await fetch('/api/fun-stats');
+    var d = await r.json();
+    document.getElementById('funCount')
+      .textContent = d.fun_requests_served;
+  } catch (e) { /* ignore */ }
+}
+refreshFunCount();
+</script>
+</body>
+</html>

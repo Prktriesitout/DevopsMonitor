@@ -394,6 +394,24 @@ devops-project1/
 
 ---
 
+## Fun / Demo Endpoints
+
+Interactive landing page and lightweight fun endpoints for quick API testing and demos. All routes go through the existing logging middleware and Prometheus instrumentation automatically.
+
+| Route | Method | Response | Description |
+|:---|:---|:---|:---|
+| `/` | GET | HTML | Interactive landing page with buttons for all endpoints |
+| `/api/joke` | GET | `{"joke": "..."}` | Random programming joke |
+| `/api/quote` | GET | `{"quote": "...", "author": "..."}` | Random inspirational quote |
+| `/api/dice?sides=6` | GET | `{"sides": N, "result": N}` | Roll a die (2-100 sides, default 6) |
+| `/api/coinflip` | GET | `{"result": "heads"\|"tails"}` | Flip a coin |
+| `/api/fortune` | GET | `{"fortune": "..."}` | Random fortune cookie message |
+| `/api/fun-stats` | GET | `{"fun_requests_served": N}` | In-memory counter of fun endpoint requests |
+
+The landing page (`/`) displays a live request counter and fetch results inline via JavaScript — no page reloads required.
+
+---
+
 ## License
 
 This project is provided as a demonstration of DevOps monitoring and CI/CD best practices.
