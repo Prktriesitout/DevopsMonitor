@@ -75,12 +75,12 @@ flowchart LR
     end
 
     subgraph K8s["☸️ Kubernetes Cluster"]
-        subgraph default["namespace: default"]
+        subgraph defaultNS["namespace: default"]
             J --> P1[Pod 1]
             J --> P2[Pod 2]
             J --> P3[Pod 3]
         end
-        subgraph monitoring["namespace: monitoring"]
+        subgraph monitoringNS["namespace: monitoring"]
             PR[Prometheus] --> AM[Alertmanager]
             FB[Fluent Bit] --> LK[Loki]
             PR --> GF[Grafana]
